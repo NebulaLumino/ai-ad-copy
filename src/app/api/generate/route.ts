@@ -1,18 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server'
-import OpenAI from 'openai'
-const openai = new OpenAI({ apiKey: process.env.DEEPSEEK_API_KEY || 'sk-48987c1a1dc246ecb1b52a01647e8b16', baseURL: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1' })
-export async function POST(request: NextRequest) {
+import { NextRequest, NextResponse } from "next/server";
+import OpenAI from "openai";
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, baseURL: "https://api.deepseek.com/v1" });
+
+export async function POST(req: NextRequest) {
   try {
-    const { product, platform } = await request.json()
-    if (!product) return NextResponse.json({ error: 'Product required' }, { status: 400 })
-    const completion = await openai.chat.completions.create({
-      model: 'deepseek-chat',
-      messages: [{ role: 'system', content: `Generate ad copy for ${platform || 'general'} platform.` },
-        { role: 'user', content: `Product: ${product}` }],
-      temperature: 0.7, max_tokens: 1000,
-    })
-    const response = completion.choices[0]?.message?.content
-    if (!response) return NextResponse.json({ error: 'No response' }, { status: 500 })
-    return NextResponse.json({ ads: response })
-  } catch (error) { return NextResponse.json({ error: 'Failed' }, { status: 500 }) }
+    const { product, targetAudience, platform, goal } = await req.json();
+    const prompt = `Write high-converting ad copy:\nProduct/Service: ${product || "Product description"}\nTarget Audience: ${targetAudience || "Ideal customer profile"}\nPlatform: ${platform || "Social media"}\nCampaign Goal: ${goal || "Drive conversions"}\n\nProvide 3 ad variations: headline, body copy, and CTA. Make them punchy, benefit-focused, and action-oriented.`;
+    const completion = await client.chat.completions.create({ model: "deepseek-chat", messages: [{ role: "user", content: prompt }], max_tokens: 1500, temperature: 0.8 });
+    return NextResponse.json({ result: completion.choices[0]?.message?.content || "No output." });
+  } catch (e) { return NextResponse.json({ error: "Failed" }, { status: 500 }); }
 }
